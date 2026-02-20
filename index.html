@@ -17,6 +17,7 @@ input,select{padding:8px;margin:5px;width:100%;border-radius:6px;border:none;}
 h3{margin-bottom:10px;color:#0A66C2;}
 .hidden{display:none;}
 .quiz-question{margin-bottom:12px;}
+canvas{border:1px solid #0A66C2;margin-top:10px;}
 </style>
 </head>
 <body>
@@ -27,29 +28,33 @@ h3{margin-bottom:10px;color:#0A66C2;}
 <b>High-Tech Maths</b> • Velo Computing
 </div>
 <div>
-<button id="loginBtn">Login / Save Progress</button>
+<button id="loginBtn">Login</button>
 <button id="logoutBtn" class="hidden">Logout</button>
 </div>
 </header>
 
 <div class="container">
 
-<!-- Problem Type Selector -->
-<div class="card">
-<h3>Select Problem Type</h3>
-<select id="problemType">
-  <option value="arithmetic">Arithmetic</option>
-  <option value="algebra">Algebra</option>
-  <option value="geometry">Geometry</option>
-  <option value="trigonometry">Trigonometry</option>
-  <option value="logic">Logic</option>
-</select>
-<button id="generateBtn">Generate Problems</button>
+<!-- Auth -->
+<div id="authCard" class="card">
+<h3>Login / Signup</h3>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button id="doLoginBtn">Login / Register</button>
+<div id="loginError" style="color:red;"></div>
 </div>
 
 <!-- Quiz Area -->
 <div id="quizCard" class="card hidden">
-<h3>Problems</h3>
+<h3>Hard Problems</h3>
+<select id="problemType">
+  <option value="geometry">Geometry</option>
+  <option value="algebra">Algebra</option>
+  <option value="calculus">Calculus</option>
+  <option value="trig">Trigonometry</option>
+  <option value="logic">Logic</option>
+</select>
+<button id="generateBtn">Generate Problems</button>
 <div id="quizArea"></div>
 <button id="submitBtn">Submit Answers</button>
 <div id="quizResult" style="margin-top:15px;color:#0A66C2;"></div>
@@ -59,71 +64,112 @@ h3{margin-bottom:10px;color:#0A66C2;}
 
 <script>
 // -----------------------------
-// Supabase Setup (Optional Save)
+// Supabase Setup
 // -----------------------------
 const SUPABASE_URL = "https://lqkpxervwakucksrnoss.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let currentUser = null;
-let questions = [];
+let currentUser=null;
+let questions=[];
 
 // -----------------------------
-// Login / Logout
+// Login / Signup (Email+Password)
 // -----------------------------
-window.login = async function(){
-  const email = prompt("Enter email (optional to save progress)");
-  if(!email) return alert("Progress will be temporary in this session.");
-  const {data, error} = await supabaseClient.auth.signInWithOtp({email});
-  if(error) return alert(error.message);
-  alert("Check your email to complete login!");
-};
-window.logout = async function(){
+async function login() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const loginError = document.getElementById("loginError");
+
+  loginError.textContent="";
+  if(!email || !password){ loginError.textContent="Enter email & password"; return; }
+
+  let { data, error } = await supabaseClient.auth.signInWithPassword({email, password});
+  if(error){
+    // If user does not exist, signup
+    const { data: signupData, error: signupError } = await supabaseClient.auth.signUp({email,password});
+    if(signupError){ loginError.textContent=signupError.message; return; }
+    loginError.textContent="Account created. Please log in again.";
+    return;
+  }
+}
+window.login = login;
+
+async function logout(){
   await supabaseClient.auth.signOut();
-  currentUser = null;
-  alert("Logged out. Progress will be temporary.");
-};
-document.getElementById("loginBtn").addEventListener("click", login);
+  currentUser=null;
+  document.getElementById("authCard").classList.remove("hidden");
+  document.getElementById("quizCard").classList.add("hidden");
+  document.getElementById("logoutBtn").classList.add("hidden");
+}
+window.logout = logout;
+
+document.getElementById("doLoginBtn").addEventListener("click", login);
 document.getElementById("logoutBtn").addEventListener("click", logout);
+
+// -----------------------------
+// Auth State Listener
+// -----------------------------
+supabaseClient.auth.onAuthStateChange((event, session)=>{
+  if(session && session.user){
+    currentUser=session.user;
+    document.getElementById("authCard").classList.add("hidden");
+    document.getElementById("quizCard").classList.remove("hidden");
+    document.getElementById("logoutBtn").classList.remove("hidden");
+  }
+});
 
 // -----------------------------
 // Problem Generation
 // -----------------------------
 function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
 
+// Geometry example with real shapes (canvas)
 function generateProblem(type){
   switch(type){
-    case "arithmetic":
-      const a=randomInt(1,50), b=randomInt(1,50);
-      return {question:`${a} + ${b} = ?`, answer: a+b};
-    case "algebra":
-      const x=randomInt(1,10), y=randomInt(1,10);
+    case "geometry":{
+      const canvas=document.createElement("canvas");
+      canvas.width=200; canvas.height=200;
+      const ctx=canvas.getContext("2d");
+      const side=randomInt(20,100);
+      ctx.fillStyle="#0A66C2";
+      ctx.fillRect(50,50,side,side);
+      return {question:`A square is drawn. Side length = ${side}. Area = ?`, answer: side*side, canvas};
+    }
+    case "algebra":{
+      const x=randomInt(1,20), y=randomInt(1,20);
       return {question:`Solve: ${x}x + ${y} = ${x*y + y}`, answer:1};
-    case "geometry":
-      const side=randomInt(1,20);
-      return {question:`Square with side ${side}. Area = ?`, answer: side*side};
-    case "trigonometry":
+    }
+    case "calculus":{
+      const n=randomInt(2,5);
+      return {question:`Derivative of x^${n} = ?`, answer:n+'x^'+(n-1)};
+    }
+    case "trig":{
       const angle=[30,45,60][randomInt(0,2)];
       return {question:`sin(${angle}°) rounded to 2 decimals = ?`, answer: Math.round(Math.sin(angle*Math.PI/180)*100)/100};
-    case "logic":
+    }
+    case "logic":{
       const n=randomInt(1,10);
-      return {question:`Next in sequence: ${n}, ${n+1}, ${n+3}, ?`, answer: n+6};
+      return {question:`Next in sequence: ${n}, ${n+2}, ${n+4}, ?`, answer: n+6};
+    }
     default: return {question:"1+1=?", answer:2};
   }
 }
 
 document.getElementById("generateBtn").addEventListener("click", ()=>{
-  const type = document.getElementById("problemType").value;
+  const type=document.getElementById("problemType").value;
+  const quizArea=document.getElementById("quizArea");
   questions=[];
-  const area = document.getElementById("quizArea");
-  area.innerHTML="";
-  for(let i=0;i<10;i++){
-    const p = generateProblem(type);
+  quizArea.innerHTML="";
+  for(let i=0;i<5;i++){ // 5 hard problems
+    const p=generateProblem(type);
     questions.push(p);
-    area.innerHTML += `<div class="quiz-question">${i+1}. ${p.question} <input id="q${i}" placeholder="Answer"></div>`;
+    const div=document.createElement("div");
+    div.className="quiz-question";
+    div.innerHTML=`${i+1}. ${p.question} <input id="q${i}" placeholder="Answer">`;
+    if(p.canvas) div.appendChild(p.canvas);
+    quizArea.appendChild(div);
   }
-  document.getElementById("quizCard").classList.remove("hidden");
-  document.getElementById("quizResult").textContent="";
 });
 
 // -----------------------------
@@ -133,17 +179,17 @@ document.getElementById("submitBtn").addEventListener("click", async ()=>{
   let score=0;
   for(let i=0;i<questions.length;i++){
     let val=document.getElementById("q"+i).value;
-    if(val != "" && parseFloat(val)==questions[i].answer) score++;
+    if(val != "" && (val==questions[i].answer || val==questions[i].answer.toString())) score++;
   }
   document.getElementById("quizResult").textContent=`Score: ${score}/${questions.length}`;
 
   if(currentUser){
     await supabaseClient.from("saved_results").insert({
-      user_id: currentUser.id,
-      score:score,
-      total:questions.length,
+      user_id:currentUser.id,
       type: document.getElementById("problemType").value,
-      created_at: new Date()
+      score,
+      total:questions.length,
+      created_at:new Date()
     });
   }
 });

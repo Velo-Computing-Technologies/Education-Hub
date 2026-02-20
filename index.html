@@ -22,10 +22,10 @@ h3{margin-bottom:10px;}
 
 <header>
 <div>
-<img src="https://cdn.velocomputing.tech/DailyMaths logo.png" alt="DailyMaths Logo">
+<img src="cdn.velocomputing.tech/DailyMaths logo.png" alt="DailyMaths Logo">
 <b>DailyMaths</b> • Velo Computing Technologies
 </div>
-<button id="logoutBtn" class="hidden" onclick="logout()">Logout</button>
+<button id="logoutBtn" class="hidden">Logout</button>
 </header>
 
 <div class="container">
@@ -35,7 +35,7 @@ h3{margin-bottom:10px;}
 <h3>Sign in or Register</h3>
 <input id="email" type="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
-<button onclick="login()">Sign In / Register</button>
+<button id="loginBtn">Sign In / Register</button>
 <div id="loginError" style="color:red;"></div>
 </div>
 
@@ -44,7 +44,7 @@ h3{margin-bottom:10px;}
 <div class="card">
 <h3>Daily Quiz</h3>
 <div id="quizArea"></div>
-<button onclick="submitQuiz()">Submit Quiz</button>
+<button id="submitQuizBtn">Submit Quiz</button>
 </div>
 
 <div class="card">
@@ -66,7 +66,7 @@ h3{margin-bottom:10px;}
 // -----------------------------
 const SUPABASE_URL = "https://lqkpxervwakucksrnoss.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8";
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // -----------------------------
 // DOM Elements
@@ -79,45 +79,54 @@ const adminPanel = document.getElementById("adminPanel");
 const adminContent = document.getElementById("adminContent");
 const quizArea = document.getElementById("quizArea");
 const progress = document.getElementById("progress");
+const loginBtn = document.getElementById("loginBtn");
+const submitQuizBtn = document.getElementById("submitQuizBtn");
 
 let currentUser;
 let userRole = "student";
 let questions = [];
 
 // -----------------------------
-// Login / Register
+// Global Login / Logout
 // -----------------------------
-async function login() {
+window.login = async function() {
   loginError.textContent = "";
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  if(!email || !password){ loginError.textContent="Email & password required"; return; }
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-  // Sign in
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if(!email && !password) { loginError.textContent="Please enter your email and password."; return; }
+  if(!email) { loginError.textContent="Please enter your email."; return; }
+  if(!password) { loginError.textContent="Please enter your password."; return; }
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if(error){
+    // Try signup if invalid login
     if(error.message.includes("Invalid login credentials")){
-      // Try sign-up
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
-      if(signUpErr){ loginError.textContent = signUpErr.message; return; }
+      const { data: signupData, error: signupError } = await supabaseClient.auth.signUp({ email, password });
+      if(signupError){ loginError.textContent = signupError.message; return; }
       loginError.textContent = "Account created. Please check email to confirm.";
     } else {
       loginError.textContent = error.message;
+      return;
     }
   }
-}
+};
+
+window.logout = async function(){
+  await supabaseClient.auth.signOut();
+};
 
 // -----------------------------
-// Logout
+// Attach event listeners
 // -----------------------------
-async function logout(){
-  await supabase.auth.signOut();
-}
+loginBtn.addEventListener("click", login);
+logoutBtn.addEventListener("click", logout);
+submitQuizBtn.addEventListener("click", submitQuiz);
 
 // -----------------------------
-// Auth state change
+// Auth state listener
 // -----------------------------
-supabase.auth.onAuthStateChange(async (event, session)=>{
+supabaseClient.auth.onAuthStateChange(async (event, session)=>{
   if(session && session.user){
     currentUser = session.user;
     authCard.classList.add("hidden");
@@ -136,10 +145,10 @@ supabase.auth.onAuthStateChange(async (event, session)=>{
 });
 
 // -----------------------------
-// Load Role & Admin
+// Load User Role & Admin Panel
 // -----------------------------
 async function loadUserRole(){
-  const { data } = await supabase.from("profiles").select("role,school_id").eq("id",currentUser.id).single();
+  const { data } = await supabaseClient.from("profiles").select("role,school_id").eq("id",currentUser.id).single();
   if(data){
     userRole = data.role;
     if(userRole !== "student"){
@@ -155,7 +164,7 @@ async function loadUserRole(){
 }
 
 // -----------------------------
-// Daily Quiz
+// Daily Quiz Generation
 // -----------------------------
 function seededRandom(seed){
   let x = Math.sin(seed++)*10000;
@@ -169,7 +178,7 @@ async function generateDailyQuiz(){
   let numericSeed=0;
   for(let i=0;i<seedStr.length;i++) numericSeed += seedStr.charCodeAt(i);
 
-  const {data: problems} = await supabase.from("problem_bank").select("*").eq("school_id",schoolId);
+  const {data: problems} = await supabaseClient.from("problem_bank").select("*").eq("school_id",schoolId);
 
   questions=[]; quizArea.innerHTML="";
   for(let i=0;i<10;i++){
@@ -189,7 +198,7 @@ async function submitQuiz(){
     let val = document.getElementById("q"+i).value;
     if(val == questions[i].answer) score++;
   }
-  await supabase.from("quiz_attempts").insert({ user_id: currentUser.id, school_id: currentUser.school_id, score: score, total: questions.length, mode:'daily' });
+  await supabaseClient.from("quiz_attempts").insert({ user_id: currentUser.id, school_id: currentUser.school_id, score: score, total: questions.length, mode:'daily' });
   alert(`Score: ${score}/${questions.length}`);
   loadProgress();
 }
@@ -198,7 +207,7 @@ async function submitQuiz(){
 // Load Progress
 // -----------------------------
 async function loadProgress(){
-  const {data} = await supabase.from("quiz_attempts").select("*").eq("user_id",currentUser.id);
+  const {data} = await supabaseClient.from("quiz_attempts").select("*").eq("user_id",currentUser.id);
   progress.innerHTML="";
   data.forEach(r=>{
     progress.innerHTML += `<div>${new Date(r.taken_at).toLocaleDateString()} — ${r.score}/${r.total}</div>`;
@@ -206,11 +215,11 @@ async function loadProgress(){
 }
 
 // -----------------------------
-// Admin Functions
+// Admin functions
 // -----------------------------
-async function createSchool(){ let name=prompt("School Name:"); if(!name) return; await supabase.from("schools").insert({name:name,owner_id:currentUser.id}); alert("School Created"); }
-async function addUser(){ let email=prompt("User Email:"); alert("Invite via Supabase Dashboard"); }
-async function addProblem(){ let q=prompt("Problem text:"); let a=prompt("Answer:"); let type=prompt("Type:"); await supabase.from("problem_bank").insert({school_id:currentUser.school_id,question:q,answer:a,type:type,created_by:currentUser.id}); alert("Problem Added"); }
+window.createSchool = async function(){ let name=prompt("School Name:"); if(!name) return; await supabaseClient.from("schools").insert({name:name,owner_id:currentUser.id}); alert("School Created"); }
+window.addUser = async function(){ let email=prompt("User Email:"); alert("Invite via Supabase Dashboard"); }
+window.addProblem = async function(){ let q=prompt("Problem text:"); let a=prompt("Answer:"); let type=prompt("Type:"); await supabaseClient.from("problem_bank").insert({school_id:currentUser.school_id,question:q,answer:a,type:type,created_by:currentUser.id}); alert("Problem Added"); }
 </script>
 </body>
 </html>

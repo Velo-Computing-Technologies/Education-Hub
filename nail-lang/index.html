@@ -18,6 +18,7 @@ input, button { padding:10px; font-size:16px; margin-top:10px; }
 
 <h1>NailLang - English Learning</h1>
 
+<!-- LOGIN -->
 <div id="loginBox" class="quiz-box">
   <h2>Login (optional)</h2>
   <input type="email" id="email" placeholder="Email">
@@ -27,6 +28,7 @@ input, button { padding:10px; font-size:16px; margin-top:10px; }
   <div id="loginResult" class="result"></div>
 </div>
 
+<!-- VOCAB QUIZ -->
 <div id="vocabQuiz" class="quiz-box">
   <h2>Vocabulary Quiz</h2>
   <div id="vocabQuestion">Loading...</div>
@@ -35,6 +37,7 @@ input, button { padding:10px; font-size:16px; margin-top:10px; }
   <div id="vocabResult" class="result"></div>
 </div>
 
+<!-- SENTENCE QUIZ -->
 <div id="sentenceQuiz" class="quiz-box">
   <h2>Sentence Construction</h2>
   <div id="sentenceQuestion">Loading...</div>
@@ -52,7 +55,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentVocab, currentSentence;
 
-// ----- LOGIN -----
+// -------- LOGIN ----------
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
@@ -64,7 +67,10 @@ async function login() {
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if(error){ resultDiv.textContent = "Login failed: " + error.message; return; }
+  if(error){ 
+    resultDiv.textContent = "Login failed: " + error.message; 
+    return; 
+  }
   resultDiv.textContent = "✅ Logged in!";
 }
 
@@ -73,35 +79,70 @@ async function logout(){
   document.getElementById("loginResult").textContent = "Logged out.";
 }
 
-// ----- VOCAB QUIZ -----
+// -------- VOCAB QUIZ ----------
 async function loadVocab() {
-  const { data, error } = await supabase.from("nail_vocab_quiz").select("*").order("id",{ascending:true}).limit(1).single();
-  if(error){ document.getElementById("vocabQuestion").textContent = "Error: "+error.message; return; }
-  currentVocab = data;
-  document.getElementById("vocabQuestion").textContent = data.question;
+  const { data, error } = await supabase
+    .from("nail_vocab_quiz")
+    .select("*")
+    .order("id", { ascending: true })
+    .limit(1);
+
+  if(error || !data || data.length === 0){
+    document.getElementById("vocabQuestion").textContent = "Error loading question: " + (error?.message || "No data");
+    return;
+  }
+
+  currentVocab = data[0];
+  document.getElementById("vocabQuestion").textContent = currentVocab.question;
 }
 
 async function submitVocab(){
   const answer = document.getElementById("vocabAnswer").value.trim();
   const resultDiv = document.getElementById("vocabResult");
-  if(!answer){ resultDiv.textContent = "Enter answer"; return; }
+  if(!answer){ resultDiv.textContent="Enter answer"; return; }
+
   const correct = answer.toLowerCase() === currentVocab.answer.toLowerCase();
   resultDiv.textContent = correct ? "✅ Correct!" : "❌ Incorrect. Correct: " + currentVocab.answer;
 
   // Save progress if logged in
-  const user = supabase.auth.getUser();
-  if(user){ await supabase.from("nail_lang_progress").insert({ user_id:user.id, quiz_type:'vocab', question_id:currentVocab.id, correct }); }
+  const { data: user } = await supabase.auth.getUser();
+  if(user?.user){
+    await supabase.from("nail_lang_progress").insert({ 
+      user_id:user.user.id, 
+      quiz_type:'vocab', 
+      question_id:currentVocab.id, 
+      correct 
+    });
+  }
 
   document.getElementById("vocabAnswer").value = "";
   await loadVocab();
 }
 
-// ----- SENTENCE QUIZ -----
+// -------- SENTENCE QUIZ ----------
 async function loadSentence(){
-  const { data: sentence, error } = await supabase.from("nail_sentence_quiz").select("*").order("id",{ascending:true}).limit(1).single();
-  if(error){ document.getElementById("sentenceQuestion").textContent="Error: "+error.message; return; }
-  const { data: words } = await supabase.from("nail_sentence_words").select("word").eq("sentence_id", sentence.id);
-  if(!words){ document.getElementById("sentenceQuestion").textContent="Error loading words"; return; }
+  const { data: sentences, error } = await supabase
+    .from("nail_sentence_quiz")
+    .select("*")
+    .order("id",{ascending:true})
+    .limit(1);
+
+  if(error || !sentences || sentences.length===0){
+    document.getElementById("sentenceQuestion").textContent="Error: "+(error?.message||"No data");
+    return;
+  }
+
+  const sentence = sentences[0];
+  const { data: words } = await supabase
+    .from("nail_sentence_words")
+    .select("word")
+    .eq("sentence_id", sentence.id);
+
+  if(!words || words.length===0){
+    document.getElementById("sentenceQuestion").textContent="Error loading words";
+    return;
+  }
+
   currentSentence = sentence;
   const shuffled = words.map(w=>w.word).sort(()=>Math.random()-0.5);
   document.getElementById("sentenceQuestion").textContent = "Arrange words: " + shuffled.join(" ");
@@ -111,17 +152,26 @@ async function submitSentence(){
   const answer = document.getElementById("sentenceAnswer").value.trim();
   const resultDiv = document.getElementById("sentenceResult");
   if(!answer){ resultDiv.textContent="Enter answer"; return; }
+
   const correct = answer.toLowerCase() === currentSentence.sentence.toLowerCase();
   resultDiv.textContent = correct ? "✅ Correct!" : "❌ Incorrect. Correct: " + currentSentence.sentence;
 
-  const user = supabase.auth.getUser();
-  if(user){ await supabase.from("nail_lang_progress").insert({ user_id:user.id, quiz_type:'sentence', question_id:currentSentence.id, correct }); }
+  // Save progress if logged in
+  const { data: user } = await supabase.auth.getUser();
+  if(user?.user){
+    await supabase.from("nail_lang_progress").insert({ 
+      user_id:user.user.id, 
+      quiz_type:'sentence', 
+      question_id:currentSentence.id, 
+      correct 
+    });
+  }
 
   document.getElementById("sentenceAnswer").value = "";
   await loadSentence();
 }
 
-// ----- INITIAL LOAD -----
+// -------- INITIAL LOAD ----------
 loadVocab();
 loadSentence();
 

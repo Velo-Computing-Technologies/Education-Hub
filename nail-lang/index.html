@@ -89,40 +89,59 @@ h3,h4{color:#0A66C2;}
 // -----------------------------
 const SUPABASE_URL = "https://lqkpxervwakucksrnoss.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8";
+
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let currentUser = null;
 
-// -----------------------------
-// Authentication
-// -----------------------------
-document.getElementById("doLoginBtn").addEventListener("click", async ()=>{
+// Login
+document.getElementById("doLoginBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
   const loginError = document.getElementById("loginError");
-  loginError.textContent="";
-  if(!email || !password){ loginError.textContent="Enter email & password"; return; }
+  loginError.textContent = "";
 
-  // Login
-  let {data,error} = await supabase.auth.signInWithPassword({email,password});
-  if(error){
-    const {data:signup,error:signupError} = await supabase.auth.signUp({email,password});
-    if(signupError){ loginError.textContent = signupError.message; return; }
-    loginError.textContent="Account created. Please login again.";
+  if (!email || !password) {
+    loginError.textContent = "Please enter both email and password.";
     return;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
+  if (error) {
+    // Optional: auto-signup if user not found
+    if (error.status === 400 || error.message.includes("invalid login")) {
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({ email, password });
+      if (signupError) { loginError.textContent = signupError.message; return; }
+      loginError.textContent = "Account created! Please log in again.";
+      return;
+    }
+    loginError.textContent = error.message;
+    return;
+  }
+
+  if (data.user) {
+    currentUser = data.user;
+    loginError.textContent = "";
+    document.getElementById("authCard").classList.add("hidden");
+    document.getElementById("toolsCard").classList.remove("hidden");
+    document.getElementById("logoutBtn").classList.remove("hidden");
   }
 });
 
-document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+// Logout
+document.getElementById("logoutBtn").addEventListener("click", async () => {
   await supabase.auth.signOut();
-  currentUser=null;
+  currentUser = null;
   document.getElementById("authCard").classList.remove("hidden");
   document.getElementById("toolsCard").classList.add("hidden");
   document.getElementById("logoutBtn").classList.add("hidden");
 });
 
-supabase.auth.onAuthStateChange((event, session)=>{
-  if(session && session.user){
-    currentUser=session.user;
+// Detect auth changes
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
     document.getElementById("authCard").classList.add("hidden");
     document.getElementById("toolsCard").classList.remove("hidden");
     document.getElementById("logoutBtn").classList.remove("hidden");

@@ -3,312 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NailLang | Velo Computing</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>NailLang - English Learning</title>
+<link rel="icon" href="https://cdn.velocomputing.tech/DailyMaths%20logo.png">
 <style>
-body { margin:0; padding:0; font-family:Inter,sans-serif; background:#0f111a; color:#fff; }
-header {background:#1a1c2b; padding:15px; display:flex; justify-content:space-between; align-items:center;}
-header img{height:40px; margin-right:10px;}
-button{padding:8px 14px; margin:5px; border:none; border-radius:6px; cursor:pointer; background:#0A66C2; color:#fff;}
-button:hover{background:#0d7cd9;}
-.container{padding:20px; max-width:1000px; margin:auto; display:flex; flex-direction:column; gap:20px;}
-.card{background:#1e2030; padding:20px; border-radius:12px;}
-input,textarea,select{padding:8px; margin:5px 0; width:100%; border-radius:6px; border:none; background:#2a2c3b; color:#fff;}
-h3,h4{color:#0A66C2;}
-.result-box{margin-top:10px; padding:10px; background:#0A66C2; border-radius:8px; white-space:pre-wrap;}
-.hidden{display:none;}
+body { font-family: 'Arial', sans-serif; background:#f0f0f0; color:#222; padding:20px; }
+h1 { text-align:center; }
+.quiz-box { background:#fff; padding:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); margin-bottom:20px; }
+input, button { padding:10px; font-size:16px; margin-top:10px; }
+.result { margin-top:10px; font-weight:bold; }
+#loginBox { display:flex; flex-direction:column; max-width:300px; margin:auto; }
 </style>
 </head>
 <body>
 
-<header>
-<div>
-<img src="https://cdn.velocomputing.tech/nail-lang-logo.png" alt="NailLang Logo">
-<b>NailLang</b> • Velo Computing
-</div>
-<div>
-<button id="loginBtn" onclick="showLogin()">Login</button>
-<button id="logoutBtn" onclick="logout()" class="hidden">Logout</button>
-</div>
-</header>
+<h1>NailLang - English Learning</h1>
 
-<div class="container">
-
-<!-- Authentication -->
-<div id="authCard" class="card">
-<h3>Login / Signup</h3>
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button id="doLoginBtn" onclick="login()">Login / Register</button>
-<div id="loginError" style="color:red;"></div>
+<div id="loginBox" class="quiz-box">
+  <h2>Login (optional)</h2>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="logout()">Logout</button>
+  <div id="loginResult" class="result"></div>
 </div>
 
-<!-- NailLang Tools -->
-<div id="toolsCard" class="card hidden">
-<h3>Grammar & Vocabulary Tools</h3>
-
-<!-- Grammar Checker -->
-<div class="card">
-<h4>Grammar Checker</h4>
-<textarea id="grammarInput" placeholder="Type a sentence..."></textarea>
-<button id="checkGrammarBtn">Check Grammar</button>
-<div id="grammarResult" class="result-box hidden"></div>
+<div id="vocabQuiz" class="quiz-box">
+  <h2>Vocabulary Quiz</h2>
+  <div id="vocabQuestion">Loading...</div>
+  <input id="vocabAnswer" placeholder="Type your answer">
+  <button onclick="submitVocab()">Submit</button>
+  <div id="vocabResult" class="result"></div>
 </div>
 
-<!-- Vocabulary Lookup -->
-<div class="card">
-<h4>Vocabulary Lookup</h4>
-<input id="vocabWord" type="text" placeholder="Enter a word">
-<button id="lookupBtn">Lookup</button>
-<div id="vocabResult" class="result-box hidden"></div>
+<div id="sentenceQuiz" class="quiz-box">
+  <h2>Sentence Construction</h2>
+  <div id="sentenceQuestion">Loading...</div>
+  <input id="sentenceAnswer" placeholder="Construct the sentence correctly">
+  <button onclick="submitSentence()">Submit</button>
+  <div id="sentenceResult" class="result"></div>
 </div>
 
-<!-- Vocabulary Quiz -->
-<div class="card">
-<h4>Vocabulary Quiz</h4>
-<div id="vocabQuestion"></div>
-<input id="vocabAnswer" placeholder="Answer">
-<button id="vocabSubmitBtn">Submit</button>
-<div id="vocabResultQuiz" class="result-box hidden"></div>
-</div>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-<!-- Sentence Construction -->
-<div class="card">
-<h4>Sentence Construction</h4>
-<div id="sentenceQuestion"></div>
-<input id="sentenceAnswer" placeholder="Construct the sentence correctly">
-<button id="sentenceSubmitBtn">Submit</button>
-<div id="sentenceResult" class="result-box hidden"></div>
-</div>
+const SUPABASE_URL = "https://lqkpxervwakucksrnoss.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-</div>
+let currentVocab, currentSentence;
 
-<script>
-// -----------------------------
-// Supabase Setup
-// -----------------------------
-window.supabaseClient = supabase.createClient(
-  "https://lqkpxervwakucksrnoss.supabase.co",
-  "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8"
-);
-let currentUser = null;
-
-// -----------------------------
-// Show login card
-// -----------------------------
-function showLogin() {
-  document.getElementById("authCard").classList.remove("hidden");
-  document.getElementById("toolsCard").classList.add("hidden");
-}
-
-// -----------------------------
-// Authentication
-// -----------------------------
+// ----- LOGIN -----
 async function login() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
-  const loginError = document.getElementById("loginError");
-  loginError.textContent = "";
+  const resultDiv = document.getElementById("loginResult");
 
-  if (!email || !password) {
-    loginError.textContent = "Enter both email and password.";
+  if(!email || !password){
+    resultDiv.textContent = "Please enter email & password.";
     return;
   }
 
-  const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    // Auto-signup if login fails
-    if(error.status === 400 || error.message.includes("invalid login")) {
-      const { data: signupData, error: signupError } = await window.supabaseClient.auth.signUp({ email, password });
-      if(signupError){ loginError.textContent = signupError.message; return; }
-      loginError.textContent = "Account created! Please log in again.";
-      return;
-    }
-    loginError.textContent = error.message;
-    return;
-  }
-
-  if (data.user) {
-    currentUser = data.user;
-    loginError.textContent = "";
-    document.getElementById("authCard").classList.add("hidden");
-    document.getElementById("toolsCard").classList.remove("hidden");
-    document.getElementById("logoutBtn").classList.remove("hidden");
-    fetchVocabQuestion();
-    fetchSentenceQuestion();
-  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if(error){ resultDiv.textContent = "Login failed: " + error.message; return; }
+  resultDiv.textContent = "✅ Logged in!";
 }
 
-// -----------------------------
-// Logout
-// -----------------------------
-async function logout() {
-  await window.supabaseClient.auth.signOut();
-  currentUser = null;
-  document.getElementById("authCard").classList.remove("hidden");
-  document.getElementById("toolsCard").classList.add("hidden");
-  document.getElementById("logoutBtn").classList.add("hidden");
+async function logout(){
+  await supabase.auth.signOut();
+  document.getElementById("loginResult").textContent = "Logged out.";
 }
 
-// -----------------------------
-// Detect auth state change
-// -----------------------------
-window.supabaseClient.auth.onAuthStateChange((event, session) => {
-  if(session?.user){
-    currentUser = session.user;
-    document.getElementById("authCard").classList.add("hidden");
-    document.getElementById("toolsCard").classList.remove("hidden");
-    document.getElementById("logoutBtn").classList.remove("hidden");
-    fetchVocabQuestion();
-    fetchSentenceQuestion();
-  }
-});
-
-// -----------------------------
-// Grammar Checker
-// -----------------------------
-document.getElementById("checkGrammarBtn").addEventListener("click", async ()=>{
-  const text = document.getElementById("grammarInput").value.trim();
-  const resultDiv = document.getElementById("grammarResult");
-  resultDiv.classList.remove("hidden");
-  if(!text){ resultDiv.textContent="Enter a sentence."; return; }
-
-  try{
-    const params = new URLSearchParams();
-    params.append("text", text);
-    params.append("language","en-US");
-    const res = await fetch("https://api.languagetool.org/v2/check",{method:"POST",body:params});
-    const data = await res.json();
-    if(data.matches.length===0){ resultDiv.textContent="No issues found!"; return; }
-    let output="";
-    data.matches.forEach((m,i)=> output+=`${i+1}. ${m.message}\n`);
-    resultDiv.textContent=output;
-
-    if(currentUser){
-      await window.supabaseClient.from("nail_lang_progress").insert({
-        user_id: currentUser.id,
-        type:"grammar",
-        input:text,
-        result:output
-      });
-    }
-
-  }catch(err){ resultDiv.textContent="Error: "+err.message; }
-});
-
-// -----------------------------
-// Vocabulary Lookup
-// -----------------------------
-document.getElementById("lookupBtn").addEventListener("click", async ()=>{
-  const word = document.getElementById("vocabWord").value.trim();
-  const resultDiv = document.getElementById("vocabResult");
-  resultDiv.classList.remove("hidden");
-  if(!word){ resultDiv.textContent="Enter a word."; return; }
-
-  try{
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-    const data = await res.json();
-    if(data.title==="No Definitions Found"){ resultDiv.textContent=`No definition found for "${word}"`; return; }
-    const meaning=data[0].meanings[0];
-    const defs=meaning.definitions[0];
-    let output=`Word: ${word}\nPart of Speech: ${meaning.partOfSpeech}\nDefinition: ${defs.definition}\n`;
-    if(defs.example) output+=`Example: ${defs.example}\n`;
-    if(defs.synonyms?.length) output+=`Synonyms: ${defs.synonyms.join(", ")}\n`;
-    if(defs.antonyms?.length) output+=`Antonyms: ${defs.antonyms.join(", ")}\n`;
-    resultDiv.textContent=output;
-
-    if(currentUser){
-      await window.supabaseClient.from("nail_lang_progress").insert({
-        user_id: currentUser.id,
-        type:"vocab_lookup",
-        input:word,
-        result:output
-      });
-    }
-
-  }catch(err){ resultDiv.textContent="Error: "+err.message; }
-});
-
-// -----------------------------
-// Vocabulary Quiz (Dynamic)
-// -----------------------------
-let currentVocab = null;
-async function fetchVocabQuestion() {
-  const { data, error } = await window.supabaseClient
-    .from("nail_vocab_quiz")
-    .select("*")
-    .order('id',{ascending:false})
-    .limit(1)
-    .single();
-  if(error){ console.error(error); return; }
+// ----- VOCAB QUIZ -----
+async function loadVocab() {
+  const { data, error } = await supabase.from("nail_vocab_quiz").select("*").order("id",{ascending:true}).limit(1).single();
+  if(error){ document.getElementById("vocabQuestion").textContent = "Error: "+error.message; return; }
   currentVocab = data;
   document.getElementById("vocabQuestion").textContent = data.question;
-  document.getElementById("vocabResultQuiz").classList.add("hidden");
 }
 
-document.getElementById("vocabSubmitBtn").addEventListener("click", async ()=>{
-  const ans = document.getElementById("vocabAnswer").value.trim().toLowerCase();
-  const result = document.getElementById("vocabResultQuiz");
-  if(ans===currentVocab.answer.toLowerCase()){ result.textContent="✅ Correct!"; }
-  else{ result.textContent=`❌ Incorrect. Correct: ${currentVocab.answer}`; }
-  result.classList.remove("hidden");
+async function submitVocab(){
+  const answer = document.getElementById("vocabAnswer").value.trim();
+  const resultDiv = document.getElementById("vocabResult");
+  if(!answer){ resultDiv.textContent = "Enter answer"; return; }
+  const correct = answer.toLowerCase() === currentVocab.answer.toLowerCase();
+  resultDiv.textContent = correct ? "✅ Correct!" : "❌ Incorrect. Correct: " + currentVocab.answer;
 
-  if(currentUser){
-    await window.supabaseClient.from("nail_lang_progress").insert({
-      user_id: currentUser.id,
-      type:"vocab_quiz",
-      input:currentVocab.question,
-      result:result.textContent
-    });
-  }
+  // Save progress if logged in
+  const user = supabase.auth.getUser();
+  if(user){ await supabase.from("nail_lang_progress").insert({ user_id:user.id, quiz_type:'vocab', question_id:currentVocab.id, correct }); }
 
-  await fetchVocabQuestion();
-});
-
-// -----------------------------
-// Sentence Construction (Dynamic)
-// -----------------------------
-let currentSentence = null;
-async function fetchSentenceQuestion() {
-  const { data, error } = await window.supabaseClient
-    .from("nail_sentence_quiz")
-    .select("id,sentence")
-    .order('id',{ascending:false})
-    .limit(1)
-    .single();
-  if(error){ console.error(error); return; }
-  currentSentence = data;
-
-  const { data: wordsData } = await window.supabaseClient
-    .from("nail_sentence_words")
-    .select("word")
-    .eq("sentence_id", currentSentence.id);
-
-  const shuffled = wordsData.map(w=>w.word).sort(()=>Math.random()-0.5);
-  document.getElementById("sentenceQuestion").textContent = "Arrange words: "+shuffled.join(" ");
-  document.getElementById("sentenceResult").classList.add("hidden");
-  document.getElementById("sentenceAnswer").value="";
+  document.getElementById("vocabAnswer").value = "";
+  await loadVocab();
 }
 
-document.getElementById("sentenceSubmitBtn").addEventListener("click", async ()=>{
-  const ans = document.getElementById("sentenceAnswer").value.trim();
-  const result = document.getElementById("sentenceResult");
-  if(ans.toLowerCase()===currentSentence.sentence.toLowerCase()){ result.textContent="✅ Correct!"; }
-  else{ result.textContent=`❌ Incorrect. Correct: ${currentSentence.sentence}`; }
-  result.classList.remove("hidden");
+// ----- SENTENCE QUIZ -----
+async function loadSentence(){
+  const { data: sentence, error } = await supabase.from("nail_sentence_quiz").select("*").order("id",{ascending:true}).limit(1).single();
+  if(error){ document.getElementById("sentenceQuestion").textContent="Error: "+error.message; return; }
+  const { data: words } = await supabase.from("nail_sentence_words").select("word").eq("sentence_id", sentence.id);
+  if(!words){ document.getElementById("sentenceQuestion").textContent="Error loading words"; return; }
+  currentSentence = sentence;
+  const shuffled = words.map(w=>w.word).sort(()=>Math.random()-0.5);
+  document.getElementById("sentenceQuestion").textContent = "Arrange words: " + shuffled.join(" ");
+}
 
-  if(currentUser){
-    await window.supabaseClient.from("nail_lang_progress").insert({
-      user_id: currentUser.id,
-      type:"sentence_quiz",
-      input:currentSentence.sentence,
-      result:result.textContent
-    });
-  }
+async function submitSentence(){
+  const answer = document.getElementById("sentenceAnswer").value.trim();
+  const resultDiv = document.getElementById("sentenceResult");
+  if(!answer){ resultDiv.textContent="Enter answer"; return; }
+  const correct = answer.toLowerCase() === currentSentence.sentence.toLowerCase();
+  resultDiv.textContent = correct ? "✅ Correct!" : "❌ Incorrect. Correct: " + currentSentence.sentence;
 
-  await fetchSentenceQuestion();
-});
+  const user = supabase.auth.getUser();
+  if(user){ await supabase.from("nail_lang_progress").insert({ user_id:user.id, quiz_type:'sentence', question_id:currentSentence.id, correct }); }
+
+  document.getElementById("sentenceAnswer").value = "";
+  await loadSentence();
+}
+
+// ----- INITIAL LOAD -----
+loadVocab();
+loadSentence();
 
 </script>
 </body>

@@ -3,223 +3,151 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DailyMaths | Velo Computing Technologies</title>
+<title>High-Tech Maths | Velo Computing</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-body{margin:0;padding:0;font-family:Inter,sans-serif;background:#f4f7fb;}
-header{background:#0A66C2;color:white;padding:15px;display:flex;align-items:center;justify-content:space-between;}
+body{margin:0;padding:0;font-family:Inter,sans-serif;background:#0f111a;color:#fff;}
+header{background:#1a1c2b;padding:15px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
 header img{height:40px;margin-right:10px;}
 header div{display:flex;align-items:center;}
-button{padding:8px 12px;margin:5px;border:none;border-radius:6px;cursor:pointer;}
-.container{padding:30px;}
-.card{background:white;padding:20px;border-radius:12px;margin-bottom:20px;}
+button{padding:8px 14px;margin:5px;border:none;border-radius:6px;cursor:pointer;background:#0A66C2;color:#fff;font-weight:500;}
+.container{padding:20px;max-width:900px;margin:auto;}
+.card{background:#1e2030;padding:20px;border-radius:12px;margin-bottom:20px;box-shadow:0 4px 15px rgba(0,0,0,0.2);}
+input,select{padding:8px;margin:5px;width:100%;border-radius:6px;border:none;}
+h3{margin-bottom:10px;color:#0A66C2;}
 .hidden{display:none;}
-input{padding:8px;margin:5px;width:100%;}
-h3{margin-bottom:10px;}
+.quiz-question{margin-bottom:12px;}
 </style>
 </head>
 <body>
 
 <header>
 <div>
-<img src="cdn.velocomputing.tech/DailyMaths logo.png" alt="DailyMaths Logo">
-<b>DailyMaths</b> • Velo Computing Technologies
+<img src="DailyMaths logo.png" alt="DailyMaths Logo">
+<b>High-Tech Maths</b> • Velo Computing
 </div>
+<div>
+<button id="loginBtn">Login / Save Progress</button>
 <button id="logoutBtn" class="hidden">Logout</button>
+</div>
 </header>
 
 <div class="container">
 
-<!-- Auth Card -->
-<div id="authCard" class="card">
-<h3>Sign in or Register</h3>
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button id="loginBtn">Sign In / Register</button>
-<div id="loginError" style="color:red;"></div>
+<!-- Problem Type Selector -->
+<div class="card">
+<h3>Select Problem Type</h3>
+<select id="problemType">
+  <option value="arithmetic">Arithmetic</option>
+  <option value="algebra">Algebra</option>
+  <option value="geometry">Geometry</option>
+  <option value="trigonometry">Trigonometry</option>
+  <option value="logic">Logic</option>
+</select>
+<button id="generateBtn">Generate Problems</button>
 </div>
 
-<!-- Dashboard -->
-<div id="dashboard" class="hidden">
-<div class="card">
-<h3>Daily Quiz</h3>
+<!-- Quiz Area -->
+<div id="quizCard" class="card hidden">
+<h3>Problems</h3>
 <div id="quizArea"></div>
-<button id="submitQuizBtn">Submit Quiz</button>
-</div>
-
-<div class="card">
-<h3>Progress</h3>
-<div id="progress"></div>
-</div>
-
-<!-- Admin Panel -->
-<div id="adminPanel" class="card hidden">
-<h3>Admin Panel</h3>
-<div id="adminContent"></div>
+<button id="submitBtn">Submit Answers</button>
+<div id="quizResult" style="margin-top:15px;color:#0A66C2;"></div>
 </div>
 
 </div>
 
 <script>
 // -----------------------------
-// Supabase Config
+// Supabase Setup (Optional Save)
 // -----------------------------
 const SUPABASE_URL = "https://lqkpxervwakucksrnoss.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// -----------------------------
-// DOM Elements
-// -----------------------------
-const authCard = document.getElementById("authCard");
-const dashboard = document.getElementById("dashboard");
-const logoutBtn = document.getElementById("logoutBtn");
-const loginError = document.getElementById("loginError");
-const adminPanel = document.getElementById("adminPanel");
-const adminContent = document.getElementById("adminContent");
-const quizArea = document.getElementById("quizArea");
-const progress = document.getElementById("progress");
-const loginBtn = document.getElementById("loginBtn");
-const submitQuizBtn = document.getElementById("submitQuizBtn");
-
-let currentUser;
-let userRole = "student";
+let currentUser = null;
 let questions = [];
 
 // -----------------------------
-// Global Login / Logout
+// Login / Logout
 // -----------------------------
-window.login = async function() {
-  loginError.textContent = "";
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-
-  if(!email && !password) { loginError.textContent="Please enter your email and password."; return; }
-  if(!email) { loginError.textContent="Please enter your email."; return; }
-  if(!password) { loginError.textContent="Please enter your password."; return; }
-
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if(error){
-    // Try signup if invalid login
-    if(error.message.includes("Invalid login credentials")){
-      const { data: signupData, error: signupError } = await supabaseClient.auth.signUp({ email, password });
-      if(signupError){ loginError.textContent = signupError.message; return; }
-      loginError.textContent = "Account created. Please check email to confirm.";
-    } else {
-      loginError.textContent = error.message;
-      return;
-    }
-  }
+window.login = async function(){
+  const email = prompt("Enter email (optional to save progress)");
+  if(!email) return alert("Progress will be temporary in this session.");
+  const {data, error} = await supabaseClient.auth.signInWithOtp({email});
+  if(error) return alert(error.message);
+  alert("Check your email to complete login!");
 };
-
 window.logout = async function(){
   await supabaseClient.auth.signOut();
+  currentUser = null;
+  alert("Logged out. Progress will be temporary.");
 };
+document.getElementById("loginBtn").addEventListener("click", login);
+document.getElementById("logoutBtn").addEventListener("click", logout);
 
 // -----------------------------
-// Attach event listeners
+// Problem Generation
 // -----------------------------
-loginBtn.addEventListener("click", login);
-logoutBtn.addEventListener("click", logout);
-submitQuizBtn.addEventListener("click", submitQuiz);
+function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
 
-// -----------------------------
-// Auth state listener
-// -----------------------------
-supabaseClient.auth.onAuthStateChange(async (event, session)=>{
-  if(session && session.user){
-    currentUser = session.user;
-    authCard.classList.add("hidden");
-    dashboard.classList.remove("hidden");
-    logoutBtn.classList.remove("hidden");
-    await loadUserRole();
-    await generateDailyQuiz();
-    await loadProgress();
-  } else {
-    currentUser = null;
-    authCard.classList.remove("hidden");
-    dashboard.classList.add("hidden");
-    logoutBtn.classList.add("hidden");
-    adminPanel.classList.add("hidden");
+function generateProblem(type){
+  switch(type){
+    case "arithmetic":
+      const a=randomInt(1,50), b=randomInt(1,50);
+      return {question:`${a} + ${b} = ?`, answer: a+b};
+    case "algebra":
+      const x=randomInt(1,10), y=randomInt(1,10);
+      return {question:`Solve: ${x}x + ${y} = ${x*y + y}`, answer:1};
+    case "geometry":
+      const side=randomInt(1,20);
+      return {question:`Square with side ${side}. Area = ?`, answer: side*side};
+    case "trigonometry":
+      const angle=[30,45,60][randomInt(0,2)];
+      return {question:`sin(${angle}°) rounded to 2 decimals = ?`, answer: Math.round(Math.sin(angle*Math.PI/180)*100)/100};
+    case "logic":
+      const n=randomInt(1,10);
+      return {question:`Next in sequence: ${n}, ${n+1}, ${n+3}, ?`, answer: n+6};
+    default: return {question:"1+1=?", answer:2};
   }
+}
+
+document.getElementById("generateBtn").addEventListener("click", ()=>{
+  const type = document.getElementById("problemType").value;
+  questions=[];
+  const area = document.getElementById("quizArea");
+  area.innerHTML="";
+  for(let i=0;i<10;i++){
+    const p = generateProblem(type);
+    questions.push(p);
+    area.innerHTML += `<div class="quiz-question">${i+1}. ${p.question} <input id="q${i}" placeholder="Answer"></div>`;
+  }
+  document.getElementById("quizCard").classList.remove("hidden");
+  document.getElementById("quizResult").textContent="";
 });
 
 // -----------------------------
-// Load User Role & Admin Panel
+// Submit Answers
 // -----------------------------
-async function loadUserRole(){
-  const { data } = await supabaseClient.from("profiles").select("role,school_id").eq("id",currentUser.id).single();
-  if(data){
-    userRole = data.role;
-    if(userRole !== "student"){
-      adminPanel.classList.remove("hidden");
-      adminContent.innerHTML = `
-        <b>Role:</b> ${data.role}<br><br>
-        <button onclick="createSchool()">Create School</button>
-        <button onclick="addUser()">Add User</button>
-        <button onclick="addProblem()">Add Problem</button>
-      `;
-    }
-  }
-}
-
-// -----------------------------
-// Daily Quiz Generation
-// -----------------------------
-function seededRandom(seed){
-  let x = Math.sin(seed++)*10000;
-  return x - Math.floor(x);
-}
-
-async function generateDailyQuiz(){
-  let schoolId = currentUser?.school_id || "00000000-0000-0000-0000-000000000000";
-  const today = new Date().toISOString().slice(0,10);
-  let seedStr = today.split("-").join("") + schoolId;
-  let numericSeed=0;
-  for(let i=0;i<seedStr.length;i++) numericSeed += seedStr.charCodeAt(i);
-
-  const {data: problems} = await supabaseClient.from("problem_bank").select("*").eq("school_id",schoolId);
-
-  questions=[]; quizArea.innerHTML="";
-  for(let i=0;i<10;i++){
-    numericSeed++;
-    let problem = problems[Math.floor(seededRandom(numericSeed)*problems.length)] || {question:`${i+1}+${i+2}`, answer:`${i+1+i+2}`};
-    questions.push(problem);
-    quizArea.innerHTML += `<div>${problem.question} = <input id="q${i}"></div>`;
-  }
-}
-
-// -----------------------------
-// Submit Quiz
-// -----------------------------
-async function submitQuiz(){
-  let score = 0;
+document.getElementById("submitBtn").addEventListener("click", async ()=>{
+  let score=0;
   for(let i=0;i<questions.length;i++){
-    let val = document.getElementById("q"+i).value;
-    if(val == questions[i].answer) score++;
+    let val=document.getElementById("q"+i).value;
+    if(val != "" && parseFloat(val)==questions[i].answer) score++;
   }
-  await supabaseClient.from("quiz_attempts").insert({ user_id: currentUser.id, school_id: currentUser.school_id, score: score, total: questions.length, mode:'daily' });
-  alert(`Score: ${score}/${questions.length}`);
-  loadProgress();
-}
+  document.getElementById("quizResult").textContent=`Score: ${score}/${questions.length}`;
 
-// -----------------------------
-// Load Progress
-// -----------------------------
-async function loadProgress(){
-  const {data} = await supabaseClient.from("quiz_attempts").select("*").eq("user_id",currentUser.id);
-  progress.innerHTML="";
-  data.forEach(r=>{
-    progress.innerHTML += `<div>${new Date(r.taken_at).toLocaleDateString()} — ${r.score}/${r.total}</div>`;
-  });
-}
-
-// -----------------------------
-// Admin functions
-// -----------------------------
-window.createSchool = async function(){ let name=prompt("School Name:"); if(!name) return; await supabaseClient.from("schools").insert({name:name,owner_id:currentUser.id}); alert("School Created"); }
-window.addUser = async function(){ let email=prompt("User Email:"); alert("Invite via Supabase Dashboard"); }
-window.addProblem = async function(){ let q=prompt("Problem text:"); let a=prompt("Answer:"); let type=prompt("Type:"); await supabaseClient.from("problem_bank").insert({school_id:currentUser.school_id,question:q,answer:a,type:type,created_by:currentUser.id}); alert("Problem Added"); }
+  if(currentUser){
+    await supabaseClient.from("saved_results").insert({
+      user_id: currentUser.id,
+      score:score,
+      total:questions.length,
+      type: document.getElementById("problemType").value,
+      created_at: new Date()
+    });
+  }
+});
 </script>
+
 </body>
 </html>

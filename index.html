@@ -3,189 +3,103 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>High-Tech Maths | Velo Computing</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Velo Computing Education Hub</title>
 <style>
-body{margin:0;padding:0;font-family:Inter,sans-serif;background:#0f111a;color:#fff;}
-header{background:#1a1c2b;padding:15px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
-header img{height:40px;margin-right:10px;}
-header div{display:flex;align-items:center;}
-button{padding:8px 14px;margin:5px;border:none;border-radius:6px;cursor:pointer;background:#0A66C2;color:#fff;font-weight:500;}
-.container{padding:20px;max-width:1000px;margin:auto;}
-.card{background:#1e2030;padding:20px;border-radius:12px;margin-bottom:20px;box-shadow:0 4px 15px rgba(0,0,0,0.2);}
-input,select{padding:8px;margin:5px;width:100%;border-radius:6px;border:none;}
-h3{margin-bottom:10px;color:#0A66C2;}
-.hidden{display:none;}
-.quiz-question{margin-bottom:15px;}
-canvas{border:1px solid #0A66C2;margin-top:10px;}
+body {
+  margin:0;
+  font-family: Inter, sans-serif;
+  background: #0f111a;
+  color: #fff;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
+header {
+  background:#1a1c2b;
+  padding:20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 10px rgba(0,0,0,0.3);
+}
+header img {
+  height:50px;
+  margin-right:15px;
+}
+header h1 {
+  font-size:1.8em;
+  color:#0A66C2;
+}
+.container {
+  flex:1;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  padding:40px 20px;
+  gap:30px;
+}
+.card {
+  background:#1e2030;
+  padding:25px;
+  border-radius:15px;
+  width:260px;
+  text-align:center;
+  box-shadow:0 4px 15px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor:pointer;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow:0 8px 25px rgba(0,0,0,0.4);
+}
+.card img {
+  width:80px;
+  height:80px;
+  margin-bottom:15px;
+}
+.card h3 {
+  color:#0A66C2;
+  margin-bottom:10px;
+}
+.card p {
+  font-size:0.95em;
+  color:#ccc;
+}
+footer {
+  text-align:center;
+  padding:20px;
+  background:#1a1c2b;
+  color:#777;
+  font-size:0.9em;
+}
 </style>
 </head>
 <body>
 
 <header>
-<div>
-<img src="DailyMaths logo.png" alt="DailyMaths Logo">
-<b>High-Tech Maths</b> • Velo Computing
-</div>
-<div>
-<button id="loginBtn">Login</button>
-<button id="logoutBtn" class="hidden">Logout</button>
+<div style="display:flex;align-items:center;">
+<img src="https://cdn.velocomputing.tech/main-logo.png" alt="Velo Computing Logo">
+<h1>Velo Computing Education Hub</h1>
 </div>
 </header>
 
 <div class="container">
-
-<!-- Auth -->
-<div id="authCard" class="card">
-<h3>Login / Signup</h3>
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Password">
-<button id="doLoginBtn">Login / Register</button>
-<div id="loginError" style="color:red;"></div>
+  <div class="card" onclick="location.href='/ht-maths'">
+    <img src="https://cdn.velocomputing.tech/DailyMaths%20logo.png" alt="High-Tech Maths">
+    <h3>High-Tech Maths</h3>
+    <p>Advanced mathematics platform: algebra, calculus, geometry, trigonometry, logic, and more. Login optional.</p>
+  </div>
+  <div class="card" onclick="location.href='/nail-lang'">
+    <img src="https://cdn.velocomputing.tech/nail-lang-logo.png" alt="NailLang">
+    <h3>NailLang</h3>
+    <p>English language helper and learner platform: grammar, vocabulary, exercises, and advanced learning tools.</p>
+  </div>
 </div>
 
-<!-- Quiz -->
-<div id="quizCard" class="card hidden">
-<h3>Advanced Problems</h3>
-<select id="problemType">
-  <option value="algebra">Algebra (Very Hard)</option>
-  <option value="calculus">Calculus</option>
-  <option value="geometry">Geometry</option>
-  <option value="trig">Trigonometry</option>
-  <option value="vectors">Vectors</option>
-  <option value="matrices">Matrices</option>
-  <option value="probability">Probability</option>
-  <option value="logic">Logic</option>
-</select>
-<button id="generateBtn">Generate Problems</button>
-<div id="quizArea"></div>
-<button id="submitBtn">Submit Answers</button>
-<div id="quizResult" style="margin-top:15px;color:#0A66C2;"></div>
-</div>
+<footer>
+&copy; 2026 Velo Computing Technologies | <a href="https://velocomputing.tech" style="color:#0A66C2;">velocomputing.tech</a>
+</footer>
 
-</div>
-
-<script>
-const SUPABASE_URL = "https://lqkpxervwakucksrnoss.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8";
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-let currentUser=null;
-let questions=[];
-
-document.getElementById("doLoginBtn").addEventListener("click", async ()=>{
-  const email=document.getElementById("email").value.trim();
-  const password=document.getElementById("password").value.trim();
-  const loginError=document.getElementById("loginError");
-  loginError.textContent="";
-  if(!email || !password){ loginError.textContent="Enter email & password"; return; }
-
-  let {data,error} = await supabaseClient.auth.signInWithPassword({email,password});
-  if(error){
-    const {data:signup,error:signupError} = await supabaseClient.auth.signUp({email,password});
-    if(signupError){ loginError.textContent=signupError.message; return; }
-    loginError.textContent="Account created, please login.";
-    return;
-  }
-});
-
-document.getElementById("logoutBtn").addEventListener("click", async ()=>{
-  await supabaseClient.auth.signOut();
-  currentUser=null;
-  document.getElementById("authCard").classList.remove("hidden");
-  document.getElementById("quizCard").classList.add("hidden");
-  document.getElementById("logoutBtn").classList.add("hidden");
-});
-
-supabaseClient.auth.onAuthStateChange((event, session)=>{
-  if(session && session.user){
-    currentUser=session.user;
-    document.getElementById("authCard").classList.add("hidden");
-    document.getElementById("quizCard").classList.remove("hidden");
-    document.getElementById("logoutBtn").classList.remove("hidden");
-  }
-});
-
-// ---------- Problem Generators ----------
-function randomInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-
-function generateProblem(type){
-  switch(type){
-    case "algebra": {
-      // Very hard: cubic/quadratic + system
-      const a=randomInt(1,10), b=randomInt(1,10), c=randomInt(1,10);
-      return {question:`Solve for x: ${a}x^3 + ${b}x^2 + ${c}x - ${a*b*c}=0`, answer:"complex"};
-    }
-    case "calculus":{
-      const n=randomInt(2,6);
-      return {question:`Derivative of x^${n} = ?`, answer:n+"x^"+(n-1)};
-    }
-    case "geometry":{
-      const canvas=document.createElement("canvas"); canvas.width=200; canvas.height=200;
-      const ctx=canvas.getContext("2d");
-      const r=randomInt(20,80);
-      ctx.beginPath(); ctx.arc(100,100,r,0,2*Math.PI); ctx.strokeStyle="#0A66C2"; ctx.lineWidth=3; ctx.stroke();
-      return {question:`Circle with radius ${r}. Area = ?`, answer:Math.round(Math.PI*r*r*100)/100, canvas};
-    }
-    case "trig":{
-      const angle=[30,45,60,75,90][randomInt(0,4)];
-      return {question:`Compute sin(${angle}°) rounded to 2 decimals`, answer:Math.round(Math.sin(angle*Math.PI/180)*100)/100};
-    }
-    case "vectors":{
-      const x=randomInt(1,10), y=randomInt(1,10), z=randomInt(1,10);
-      return {question:`Vector A = (${x},${y},${z}), Vector B = (${y},${x},${z}). Compute A·B`, answer:x*y+y*x+z*z};
-    }
-    case "matrices":{
-      const a=randomInt(1,5), b=randomInt(1,5), c=randomInt(1,5), d=randomInt(1,5);
-      return {question:`Matrix [[${a},${b}],[${c},${d}]] Determinant = ?`, answer:a*d-b*c};
-    }
-    case "probability":{
-      const dice=randomInt(1,6);
-      return {question:`Probability of rolling ${dice} on a dice = ?`, answer:"1/6"};
-    }
-    case "logic":{
-      const n=randomInt(1,10);
-      return {question:`Next in sequence: ${n}, ${n*2}, ${n*4}, ?`, answer:n*8};
-    }
-    default: return {question:"1+1=?", answer:2};
-  }
-}
-
-document.getElementById("generateBtn").addEventListener("click", ()=>{
-  const type=document.getElementById("problemType").value;
-  const quizArea=document.getElementById("quizArea");
-  quizArea.innerHTML="";
-  questions=[];
-  for(let i=0;i<5;i++){
-    const p=generateProblem(type);
-    questions.push(p);
-    const div=document.createElement("div");
-    div.className="quiz-question";
-    div.innerHTML=`${i+1}. ${p.question} <input id="q${i}" placeholder="Answer">`;
-    if(p.canvas) div.appendChild(p.canvas);
-    quizArea.appendChild(div);
-  }
-});
-
-// ---------- Submit ----------
-document.getElementById("submitBtn").addEventListener("click", async ()=>{
-  let score=0;
-  for(let i=0;i<questions.length;i++){
-    let val=document.getElementById("q"+i).value;
-    if(val != "" && (val==questions[i].answer || val==questions[i].answer.toString())) score++;
-  }
-  document.getElementById("quizResult").textContent=`Score: ${score}/${questions.length}`;
-
-  if(currentUser){
-    await supabaseClient.from("saved_results").insert({
-      user_id:currentUser.id,
-      type: document.getElementById("problemType").value,
-      score,
-      total:questions.length,
-      created_at:new Date()
-    });
-  }
-});
-</script>
 </body>
 </html>

@@ -20,12 +20,6 @@ input { padding:10px; font-size:16px; width:300px; }
 <body>
 
 <h1>NailLang Quiz</h1>
-<select id="difficulty">
-<option value="easy">Easy</option>
-<option value="medium">Medium</option>
-<option value="hard">Hard</option>
-</select>
-<br>
 <button onclick="startQuiz()">Start Quiz</button>
 
 <div id="stats"></div>
@@ -41,6 +35,7 @@ input { padding:10px; font-size:16px; width:300px; }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// 🔹 Supabase connection
 const supabase = window.supabase.createClient(
   "https://lqkpxervwakucksrnoss.supabase.co",
   "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8"
@@ -54,38 +49,39 @@ document.addEventListener("keydown",(e)=>{
   if(e.key==="Escape") exitQuiz();
 });
 
+// Start the quiz
 async function startQuiz(){
   totalAttempts = 0;
   correctCount = 0;
   updateStats();
   document.getElementById("errorMsg").textContent = "";
   document.getElementById("quizModal").style.display="flex";
-  loadQuestion();
+  await loadQuestion();
 }
 
+// Exit
 function exitQuiz(){
   document.getElementById("quizModal").style.display="none";
   document.getElementById("resultText").textContent="";
 }
 
+// Update stats display
 function updateStats(){
   const accuracy = totalAttempts ? Math.round((correctCount/totalAttempts)*100) : 0;
   document.getElementById("stats").textContent = `Total: ${totalAttempts} | Correct: ${correctCount} | Accuracy: ${accuracy}%`;
 }
 
+// Load a random question from Supabase
 async function loadQuestion(){
-  const difficulty = document.getElementById("difficulty").value;
   try {
     const { data, error } = await supabase
       .from("nail_vocab_quiz")
       .select("*")
-      .eq("difficulty", difficulty)
       .order("random()")
       .limit(1);
 
-    if(error) throw new Error("Database error: " + error.message);
-
-    if(!data || data.length===0) throw new Error("No questions found for difficulty: " + difficulty);
+    if(error) throw new Error("Database error: "+error.message);
+    if(!data || data.length===0) throw new Error("No questions found in the table.");
 
     currentQuestion = data[0];
     document.getElementById("questionText").textContent = currentQuestion.question;
@@ -97,6 +93,7 @@ async function loadQuestion(){
   }
 }
 
+// Submit answer
 function submitAnswer(){
   if(!currentQuestion){
     document.getElementById("errorMsg").textContent = "No question loaded. Cannot submit.";
@@ -120,7 +117,7 @@ function submitAnswer(){
   }
 
   updateStats();
-  setTimeout(loadQuestion, 1000); // auto next
+  setTimeout(loadQuestion, 1000); // auto-next
 }
 </script>
 

@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NailLang</title>
-<style>
-body { margin:0; font-family:Arial; background:#0f172a; color:white; }
-button { padding:10px 20px; margin:5px; cursor:pointer; }
-input, select { padding:10px; margin:5px; }
 
-#authBox, #dashboard { padding:30px; text-align:center; }
+<style>
+body { margin:0; font-family:Arial; background:#0f172a; color:white; text-align:center; }
+button { padding:10px 20px; margin:5px; cursor:pointer; }
+input, select { padding:10px; margin:10px; font-size:16px; }
 
 #quizModal {
   display:none;
@@ -26,7 +25,7 @@ input, select { padding:10px; margin:5px; }
   position:absolute;
   top:20px;
   right:20px;
-  font-size:28px;
+  font-size:30px;
   cursor:pointer;
 }
 
@@ -48,18 +47,7 @@ input, select { padding:10px; margin:5px; }
 </head>
 <body>
 
-<div id="authBox">
 <h1>NailLang</h1>
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Password">
-<br>
-<button onclick="signup()">Sign Up</button>
-<button onclick="login()">Login</button>
-<div id="authMsg"></div>
-</div>
-
-<div id="dashboard" style="display:none;">
-<h2>Dashboard</h2>
 
 <select id="difficulty">
 <option value="easy">Easy</option>
@@ -68,15 +56,12 @@ input, select { padding:10px; margin:5px; }
 </select>
 
 <br>
+
 <button onclick="startQuiz()">Start Quiz</button>
 <button onclick="generatePractice()">Hard Words Print</button>
 <button onclick="printResults()">Print Results</button>
-<button onclick="loadLeaderboard()">Leaderboard</button>
-<button onclick="logout()">Logout</button>
 
 <div id="stats"></div>
-<div id="leaderboard"></div>
-</div>
 
 <div id="quizModal">
 <div id="closeBtn" onclick="exitQuiz()">✖</div>
@@ -90,148 +75,111 @@ input, select { padding:10px; margin:5px; }
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-const supabase = createClient("https://lqkpxervwakucksrnoss.supabase.co","sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8");
+
+const supabase = createClient(
+ "https://lqkpxervwakucksrnoss.supabase.co",
+ "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8"
+);
 
 let currentQuestion=null;
-let currentDifficulty="easy";
+let mistakes=[];
+let total=0;
+let correctCount=0;
 
-document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") exitQuiz(); });
-
-async function signup(){
- const { error } = await supabase.auth.signUp({
-  email:email.value,
-  password:password.value
- });
- authMsg.textContent = error?error.message:"Signup successful!";
-}
-
-async function login(){
- const { error } = await supabase.auth.signInWithPassword({
-  email:email.value,
-  password:password.value
- });
- if(error){ authMsg.textContent=error.message; return; }
- authBox.style.display="none";
- dashboard.style.display="block";
- loadStats();
-}
-
-async function logout(){
- await supabase.auth.signOut();
- location.reload();
-}
+document.addEventListener("keydown",(e)=>{
+ if(e.key==="Escape") exitQuiz();
+});
 
 function startQuiz(){
- currentDifficulty=document.getElementById("difficulty").value;
- quizModal.style.display="flex";
+ document.getElementById("quizModal").style.display="flex";
  loadQuestion();
 }
 
 function exitQuiz(){
- quizModal.style.display="none";
- resultText.textContent="";
+ document.getElementById("quizModal").style.display="none";
 }
 
 async function loadQuestion(){
+ const difficulty=document.getElementById("difficulty").value;
+
  const { data } = await supabase
   .from("nail_vocab_quiz")
   .select("*")
-  .eq("difficulty",currentDifficulty)
+  .eq("difficulty",difficulty)
   .order("random()")
   .limit(1);
+
+ if(!data || !data.length){
+  questionText.textContent="No questions found.";
+  return;
+ }
 
  currentQuestion=data[0];
  questionText.textContent=currentQuestion.question;
  answerInput.value="";
+ resultText.textContent="";
 }
 
-async function submitAnswer(){
+function submitAnswer(){
  const answer=answerInput.value.trim();
- const correct=answer.toLowerCase()===currentQuestion.answer.toLowerCase();
+ if(!answer) return;
 
- resultText.textContent=correct?"✅ Correct":"❌ Incorrect: "+currentQuestion.answer;
+ total++;
 
- const { data:userData }=await supabase.auth.getUser();
+ const isCorrect=answer.toLowerCase()===currentQuestion.answer.toLowerCase();
 
- await supabase.from("nail_lang_progress").insert({
-  user_id:userData.user.id,
-  quiz_type:"vocab",
-  question_id:currentQuestion.id,
-  difficulty:currentDifficulty,
-  correct
- });
+ if(isCorrect){
+  correctCount++;
+  resultText.textContent="✅ Correct";
+ } else {
+  resultText.textContent="❌ Incorrect: "+currentQuestion.answer;
 
- if(!correct){
-  await supabase.from("nail_lang_mistakes").insert({
-   user_id:userData.user.id,
-   word:currentQuestion.question,
-   correct_answer:currentQuestion.answer,
-   difficulty:currentDifficulty
-  });
+  if(mistakes.length < 50){
+   mistakes.push({
+    word: currentQuestion.question,
+    answer: currentQuestion.answer
+   });
+  }
  }
 
- setTimeout(loadQuestion,1000);
- loadStats();
+ updateStats();
+
+ setTimeout(loadQuestion,800);
 }
 
-async function loadStats(){
- const { data:userData }=await supabase.auth.getUser();
- const { data }=await supabase
-  .from("nail_lang_progress")
-  .select("*")
-  .eq("user_id",userData.user.id);
-
- const total=data.length;
- const correct=data.filter(x=>x.correct).length;
- const accuracy= total?Math.round((correct/total)*100):0;
-
- stats.innerHTML=`Total: ${total} | Correct: ${correct} | Accuracy: ${accuracy}%`;
+function updateStats(){
+ const accuracy= total ? Math.round((correctCount/total)*100) : 0;
+ document.getElementById("stats").innerHTML=
+  `Total: ${total} | Correct: ${correctCount} | Accuracy: ${accuracy}%`;
 }
 
-async function loadLeaderboard(){
- const { data }=await supabase.from("nail_lang_leaderboard").select("*");
- leaderboard.innerHTML="<h3>Leaderboard</h3>"+data.map(x=>
-  `<p>${x.user_id} - ${x.accuracy}%</p>`
- ).join("");
-}
+function generatePractice(){
+ if(mistakes.length===0){
+  alert("No mistakes recorded.");
+  return;
+ }
 
-async function generatePractice(){
- const { data:userData }=await supabase.auth.getUser();
- const { data }=await supabase
-  .from("nail_lang_mistakes")
-  .select("*")
-  .eq("user_id",userData.user.id)
-  .limit(50);
+ document.getElementById("printBox").innerHTML=
+  "<h2>Hard English Words Practice</h2>"+
+  mistakes.map(x=>`<p><strong>${x.word}</strong> = ${x.answer}</p>`).join("")+
+  "<br><p><strong>Signed: NailLang</strong></p>";
 
- if(!data.length) return alert("No mistakes yet.");
-
- printBox.innerHTML="<h2>Hard Words Practice</h2>"+
- data.map(x=>`<p><strong>${x.word}</strong> = ${x.correct_answer}</p>`).join("")+
- "<br><p>Signed: NailLang</p>";
-
- printBox.style.display="block";
+ document.getElementById("printBox").style.display="block";
  window.print();
 }
 
-async function printResults(){
- const { data:userData }=await supabase.auth.getUser();
- const { data }=await supabase
-  .from("nail_lang_progress")
-  .select("*")
-  .eq("user_id",userData.user.id);
+function printResults(){
+ const accuracy= total ? Math.round((correctCount/total)*100) : 0;
 
- const total=data.length;
- const correct=data.filter(x=>x.correct).length;
- const accuracy=Math.round((correct/total)*100);
+ document.getElementById("printBox").innerHTML=
+  `<h2>NailLang Official Result</h2>
+  <p>Total Attempts: ${total}</p>
+  <p>Correct Answers: ${correctCount}</p>
+  <p>Accuracy: ${accuracy}%</p>
+  <br>
+  <p><strong>Certified by NailLang</strong></p>`;
 
- printBox.innerHTML=
- `<h2>NailLang Official Result</h2>
- <p>Total Attempts: ${total}</p>
- <p>Correct: ${correct}</p>
- <p>Accuracy: ${accuracy}%</p>
- <br><p>Certified by NailLang</p>`;
-
- printBox.style.display="block";
+ document.getElementById("printBox").style.display="block";
  window.print();
 }
 </script>

@@ -33,46 +33,52 @@ input { padding:10px; font-size:16px; width:300px; }
 <div id="resultText"></div>
 </div>
 
+<!-- Make functions global -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// 🔹 Supabase connection
-const supabase = window.supabase.createClient(
-  "https://lqkpxervwakucksrnoss.supabase.co",
-  "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8"
-);
+// Prevent redeclaration if already exists
+if (!window._supabaseClient) {
+  window.supabase = supabase.createClient(
+    "https://lqkpxervwakucksrnoss.supabase.co",
+    "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8"
+  );
+  window._supabaseClient = true;
+}
 
-let currentQuestion = null;
-let totalAttempts = 0;
-let correctCount = 0;
+// Global variables
+window.currentQuestion = null;
+window.totalAttempts = 0;
+window.correctCount = 0;
 
-document.addEventListener("keydown",(e)=>{
-  if(e.key==="Escape") exitQuiz();
+// ESC key exit
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") exitQuiz();
 });
 
-// Start the quiz
-async function startQuiz(){
-  totalAttempts = 0;
-  correctCount = 0;
+// Start Quiz
+function startQuiz() {
+  window.totalAttempts = 0;
+  window.correctCount = 0;
   updateStats();
   document.getElementById("errorMsg").textContent = "";
-  document.getElementById("quizModal").style.display="flex";
-  await loadQuestion();
+  document.getElementById("quizModal").style.display = "flex";
+  loadQuestion();
 }
 
-// Exit
-function exitQuiz(){
-  document.getElementById("quizModal").style.display="none";
-  document.getElementById("resultText").textContent="";
+// Exit Quiz
+function exitQuiz() {
+  document.getElementById("quizModal").style.display = "none";
+  document.getElementById("resultText").textContent = "";
 }
 
-// Update stats display
-function updateStats(){
-  const accuracy = totalAttempts ? Math.round((correctCount/totalAttempts)*100) : 0;
-  document.getElementById("stats").textContent = `Total: ${totalAttempts} | Correct: ${correctCount} | Accuracy: ${accuracy}%`;
+// Update Stats
+function updateStats() {
+  const accuracy = window.totalAttempts ? Math.round((window.correctCount / window.totalAttempts) * 100) : 0;
+  document.getElementById("stats").textContent = `Total: ${window.totalAttempts} | Correct: ${window.correctCount} | Accuracy: ${accuracy}%`;
 }
 
-// Load a random question from Supabase
-async function loadQuestion(){
+// Load a random question
+async function loadQuestion() {
   try {
     const { data, error } = await supabase
       .from("nail_vocab_quiz")
@@ -80,44 +86,43 @@ async function loadQuestion(){
       .order("random()")
       .limit(1);
 
-    if(error) throw new Error("Database error: "+error.message);
-    if(!data || data.length===0) throw new Error("No questions found in the table.");
+    if (error) throw new Error("Database error: " + error.message);
+    if (!data || data.length === 0) throw new Error("No questions found in the table.");
 
-    currentQuestion = data[0];
-    document.getElementById("questionText").textContent = currentQuestion.question;
+    window.currentQuestion = data[0];
+    document.getElementById("questionText").textContent = window.currentQuestion.question;
     document.getElementById("answerInput").value = "";
     document.getElementById("resultText").textContent = "";
-
-  } catch(err){
+  } catch (err) {
     document.getElementById("errorMsg").textContent = err.message;
   }
 }
 
-// Submit answer
-function submitAnswer(){
-  if(!currentQuestion){
+// Submit Answer
+function submitAnswer() {
+  if (!window.currentQuestion) {
     document.getElementById("errorMsg").textContent = "No question loaded. Cannot submit.";
     return;
   }
 
   const answer = document.getElementById("answerInput").value.trim();
-  if(!answer){
+  if (!answer) {
     document.getElementById("errorMsg").textContent = "Please enter an answer before submitting.";
     return;
   }
 
-  totalAttempts++;
-  const isCorrect = answer.toLowerCase() === currentQuestion.answer.toLowerCase();
+  window.totalAttempts++;
+  const isCorrect = answer.toLowerCase() === window.currentQuestion.answer.toLowerCase();
 
-  if(isCorrect){
-    correctCount++;
+  if (isCorrect) {
+    window.correctCount++;
     document.getElementById("resultText").textContent = "✅ Correct!";
   } else {
-    document.getElementById("resultText").textContent = "❌ Incorrect. Correct answer: " + currentQuestion.answer;
+    document.getElementById("resultText").textContent = "❌ Incorrect. Correct answer: " + window.currentQuestion.answer;
   }
 
   updateStats();
-  setTimeout(loadQuestion, 1000); // auto-next
+  setTimeout(loadQuestion, 1000); // auto next
 }
 </script>
 

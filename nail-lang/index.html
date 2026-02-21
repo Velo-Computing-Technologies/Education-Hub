@@ -2,26 +2,41 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>NailLang Test</title>
+<title>NailLang Full Quiz</title>
 <style>
-body { font-family: Arial; background:black; color:white; text-align:center; }
-#quiz { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; justify-content:center; align-items:center; flex-direction:column; }
-button { padding:10px 20px; margin:10px; }
-input { padding:10px; font-size:18px; }
+body { margin:0; font-family:Arial; background:#0f172a; color:white; }
+button { padding:10px 20px; margin:10px; cursor:pointer; font-size:16px; }
+input { padding:10px; font-size:16px; width:300px; }
+#quizModal {
+  display:none; position:fixed; top:0; left:0;
+  width:100%; height:100%; background:#0f172a;
+  display:flex; justify-content:center; align-items:center; flex-direction:column;
+}
+#closeBtn { position:absolute; top:20px; right:20px; font-size:28px; cursor:pointer; }
+#stats { margin-top:20px; }
+#errorMsg { color:#ff5555; margin-top:10px; }
 </style>
 </head>
 <body>
 
-<h1>NailLang Test</h1>
-<button onclick="start()">Start Quiz</button>
-<div id="stats"></div>
+<h1>NailLang Quiz</h1>
+<select id="difficulty">
+<option value="easy">Easy</option>
+<option value="medium">Medium</option>
+<option value="hard">Hard</option>
+</select>
+<br>
+<button onclick="startQuiz()">Start Quiz</button>
 
-<div id="quiz">
-<button onclick="exit()">X</button>
-<h2 id="question">Loading...</h2>
-<input id="answer">
-<button onclick="submit()">Submit</button>
-<div id="result"></div>
+<div id="stats"></div>
+<div id="errorMsg"></div>
+
+<div id="quizModal">
+<div id="closeBtn" onclick="exitQuiz()">✖</div>
+<h2 id="questionText">Loading...</h2>
+<input id="answerInput" placeholder="Type your answer">
+<button onclick="submitAnswer()">Submit</button>
+<div id="resultText"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -31,67 +46,83 @@ const supabase = window.supabase.createClient(
   "sb_publishable_Sdi0YJz0IPwK9yV-0tLvCw_9IDZQhD8"
 );
 
-let current=null;
-let total=0;
-let correct=0;
+let currentQuestion = null;
+let totalAttempts = 0;
+let correctCount = 0;
 
 document.addEventListener("keydown",(e)=>{
- if(e.key==="Escape") exit();
+  if(e.key==="Escape") exitQuiz();
 });
 
-function start(){
- document.getElementById("quiz").style.display="flex";
- load();
+async function startQuiz(){
+  totalAttempts = 0;
+  correctCount = 0;
+  updateStats();
+  document.getElementById("errorMsg").textContent = "";
+  document.getElementById("quizModal").style.display="flex";
+  loadQuestion();
 }
 
-function exit(){
- document.getElementById("quiz").style.display="none";
+function exitQuiz(){
+  document.getElementById("quizModal").style.display="none";
+  document.getElementById("resultText").textContent="";
 }
 
-async function load(){
- const { data, error } = await supabase
-  .from("nail_vocab_quiz")
-  .select("*")
-  .limit(1);
-
- if(error){
-  document.getElementById("question").textContent="ERROR: "+error.message;
-  return;
- }
-
- if(!data || data.length===0){
-  document.getElementById("question").textContent="No questions in table.";
-  return;
- }
-
- current=data[0];
- document.getElementById("question").textContent=current.question;
- document.getElementById("answer").value="";
- document.getElementById("result").textContent="";
+function updateStats(){
+  const accuracy = totalAttempts ? Math.round((correctCount/totalAttempts)*100) : 0;
+  document.getElementById("stats").textContent = `Total: ${totalAttempts} | Correct: ${correctCount} | Accuracy: ${accuracy}%`;
 }
 
-function submit(){
- if(!current) return;
+async function loadQuestion(){
+  const difficulty = document.getElementById("difficulty").value;
+  try {
+    const { data, error } = await supabase
+      .from("nail_vocab_quiz")
+      .select("*")
+      .eq("difficulty", difficulty)
+      .order("random()")
+      .limit(1);
 
- const userAnswer=document.getElementById("answer").value.trim();
- if(!userAnswer) return;
+    if(error) throw new Error("Database error: " + error.message);
 
- total++;
+    if(!data || data.length===0) throw new Error("No questions found for difficulty: " + difficulty);
 
- if(userAnswer.toLowerCase()===current.answer.toLowerCase()){
-  correct++;
-  document.getElementById("result").textContent="Correct";
- } else {
-  document.getElementById("result").textContent="Incorrect: "+current.answer;
- }
+    currentQuestion = data[0];
+    document.getElementById("questionText").textContent = currentQuestion.question;
+    document.getElementById("answerInput").value = "";
+    document.getElementById("resultText").textContent = "";
 
- document.getElementById("stats").textContent=
-  "Total: "+total+" | Correct: "+correct;
+  } catch(err){
+    document.getElementById("errorMsg").textContent = err.message;
+  }
+}
 
- setTimeout(load,800);
+function submitAnswer(){
+  if(!currentQuestion){
+    document.getElementById("errorMsg").textContent = "No question loaded. Cannot submit.";
+    return;
+  }
+
+  const answer = document.getElementById("answerInput").value.trim();
+  if(!answer){
+    document.getElementById("errorMsg").textContent = "Please enter an answer before submitting.";
+    return;
+  }
+
+  totalAttempts++;
+  const isCorrect = answer.toLowerCase() === currentQuestion.answer.toLowerCase();
+
+  if(isCorrect){
+    correctCount++;
+    document.getElementById("resultText").textContent = "✅ Correct!";
+  } else {
+    document.getElementById("resultText").textContent = "❌ Incorrect. Correct answer: " + currentQuestion.answer;
+  }
+
+  updateStats();
+  setTimeout(loadQuestion, 1000); // auto next
 }
 </script>
 
 </body>
 </html>
-

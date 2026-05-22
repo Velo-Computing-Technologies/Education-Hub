@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maths Test (Powers + More)</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #121c33;
+      --text: #eaf0ff;
+      --muted: #b9c4e6;
+      --good: #2ee59d;
+      --bad: #ff6b6b;
+      --warn: #ffd166;
+      --btn: #2b5cff;
+      --btn2: #24304f;
+      --line: rgba(255,255,255,.12);
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, #172447 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    header {
+      padding: 18px 16px 8px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    p { margin: 6px 0; color: var(--muted); line-height: 1.4; }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 12px 16px 30px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button {
+      border: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--btn);
+      color: white;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button.secondary { background: var(--btn2); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    select, input[type="number"] {
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 9px 10px;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .q {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.18);
+    }
+
+    .qTop {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .tag {
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .prompt {
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .answerRow {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .answerRow input {
+      min-width: 170px;
+    }
+
+    .feedback {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+      border-left: 3px solid rgba(255,255,255,.18);
+      padding-left: 10px;
+    }
+
+    .ok { color: var(--good); }
+    .no { color: var(--bad); }
+    .warn { color: var(--warn); }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 860px) {
+      .two { grid-template-columns: 1.2fr .8fr; }
+      .row { grid-template-columns: 1fr 1fr; }
+    }
+
+    .scoreBox {
+      display: grid;
+      gap: 10px;
+    }
+    .big {
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .hr {
+      height: 1px;
+      background: var(--line);
+      margin: 10px 0;
+    }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Maths Test (Powers + More)</h1>
+    <p>This is a little quiz that also <b>shows the steps</b> like a 10-year-old would explain them.</p>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="controls">
+        <label>
+          Number of questions:
+          <input id="count" type="number" min="5" max="25" value="10" />
+        </label>
+
+        <label>
+          Difficulty:
+          <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+
+        <button id="newBtn">Make a new test</button>
+        <button id="checkBtn" class="secondary" disabled>Check my answers</button>
+        <button id="showBtn" class="secondary" disabled>Show steps</button>
+        <button id="resetBtn" class="secondary" disabled>Clear answers</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="two">
+        <div>
+          <div id="questions" class="row"></div>
+        </div>
+
+        <aside class="scoreBox">
+          <div class="card" style="padding:12px;">
+            <div class="small">Score</div>
+            <div class="big" id="score">—</div>
+            <div class="small" id="scoreNote">Make a test to begin.</div>
+          </div>
+
+          <div class="card" style="padding:12px;">
+            <div class="small">Tips (kid-style)</div>
+            <ul class="list">
+              <li><b>Powers</b> means repeated multiplying. Like <span class="mono">3²</span> means <span class="mono">3 × 3</span>.</li>
+              <li><b>Order</b>: do powers first, then × and ÷, then + and −.</li>
+              <li>If you get stuck, press <b>Show steps</b> after checking.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // -------- Helpers --------
+    const $ = (id) => document.getElementById(id);
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function cleanNumberText(s) {
+      return String(s).trim().replace(/\s+/g, "");
+    }
+
+    function isCorrect(userText, correctValue) {
+      // We accept integers only in this quiz to keep it kid-friendly.
+      const t = cleanNumberText(userText);
+      if (t === "") return false;
+      // allow + sign
+      const n = Number(t);
+      if (!Number.isFinite(n)) return false;
+      return n === correctValue;
+    }
+
+    function kidStepsPower(base, exp, value) {
+      // example: 3^2 = 3×3 = 9
+      const parts = [];
+      parts.push(`I see ${base}^${exp}. That means I multiply ${base} by itself ${exp} times.`);
+      if (exp === 0) {
+        parts.push(`Any number to the power of 0 is 1. So ${base}^0 = 1.`);
+      } else if (exp === 1) {
+        parts.push(`Power of 1 means it stays the same: ${base}^1 = ${base}.`);
+      } else {
+        const mult = Array.from({length: exp}, () => base).join(" × ");
+        parts.push(`So I write it like this: ${base}^${exp} = ${mult}.`);
+        parts.push(`Now I multiply: ${mult} = ${value}.`);
+      }
+      return parts.join(" ");
+    }
+
+    function kidStepsTimesDiv(a, b, op, value) {
+      if (op === "×") return `I multiply: ${a} × ${b} = ${value}.`;
+      return `I divide: ${a} ÷ ${b} = ${value}.`;
+    }
+
+    function kidStepsAddSub(a, b, op, value) {
+      if (op === "+") return `I add: ${a} + ${b} = ${value}.`;
+      return `I subtract: ${a} − ${b} = ${value}.`;
+    }
+
+    function kidStepsOrderOfOpsPowerThenAdd(base, exp, add, total) {
+      const powerValue = Math.pow(base, exp);
+      return [
+        `I do powers first.`,
+        kidStepsPower(base, exp, powerValue),
+        `Then I do the ${add >= 0 ? "adding" : "subtracting"} part.`,
+        `${powerValue} ${add >= 0 ? "+" : "−"} ${Math.abs(add)} = ${total}.`
+      ].join(" ");
+    }
+
+    function makeQuestion({type, prompt, answer, steps, tag}) {
+      return {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+        type, prompt, answer, steps, tag,
+        user: "",
+        checked: false,
+        correct: null
+      };
+    }
+
+    // -------- Question generators --------
+    function genPowers(difficulty) {
+      let baseMin = 2, baseMax = 9, expMin = 2, expMax = 3;
+      if (difficulty === "easy") { baseMax = 6; expMax = 2; }
+      if (difficulty === "hard") { baseMax = 12; expMax = 4; expMin = 2; }
+
+      const base = randInt(baseMin, baseMax);
+      const exp = randInt(expMin, expMax);
+
+      const value = Math.pow(base, exp);
+      return makeQuestion({
+        type: "power",
+        prompt: `Compute: ${base}<sup>${exp}</sup>`,
+        answer: value,
+        steps: kidStepsPower(base, exp, value),
+        tag: "Powers"
+      });
+    }
+
+    function genSquaresCubes(difficulty) {
+      // quick squares/cubes
+      let nMin = 2, nMax = 15, exp = 2;
+      if (difficulty === "easy") { nMax = 12; exp = 2; }
+      if (difficulty === "medium") { nMax = 15; exp = Math.random() < 0.7 ? 2 : 3; }
+      if (difficulty === "hard") { nMax = 20; exp = Math.random() < 0.5 ? 3 : 2; }
+
+      const n = randInt(nMin, nMax);
+      const value = Math.pow(n, exp);
+      return makeQuestion({
+        type: "squarecube",
+        prompt: `What is ${n}<sup>${exp}</sup>?`,
+        answer: value,
+        steps: kidStepsPower(n, exp, value),
+        tag: exp === 2 ? "Squares" : "Cubes"
+      });
+    }
+
+    function genMultiplyDivide(difficulty) {
+      // keep division exact (no decimals)
+      const op = Math.random() < 0.5 ? "×" : "÷";
+      let a, b, value;
+
+      if (op === "×") {
+        let max = difficulty === "easy" ? 12 : (difficulty === "hard" ? 30 : 20);
+        a = randInt(2, max);
+        b = randInt(2, max);
+        value = a * b;
+      } else {
+        // create a = b * value so it divides evenly
+        let bMax = difficulty === "easy" ? 12 : (difficulty === "hard" ? 20 : 15);
+        b = randInt(2, bMax);
+        value = randInt(2, difficulty === "hard" ? 18 : 12);
+        a = b * value;
+      }
+
+      return makeQuestion({
+        type: "multdiv",
+        prompt: `Compute: ${a} ${op} ${b}`,
+        answer: op === "×" ? a * b : a / b,
+        steps: kidStepsTimesDiv(a, b, op, op === "×" ? a * b : a / b),
+        tag: op === "×" ? "Multiply" : "Divide"
+      });
+    }
+
+    function genAddSub(difficulty) {
+      let max = difficulty === "easy" ? 50 : (difficulty === "hard" ? 500 : 200);
+      const op = Math.random() < 0.5 ? "+" : "−";
+      let a = randInt(10, max);
+      let b = randInt(1, max);
+      if (op === "−" && b > a) [a, b] = [b, a];
+      const value = op === "+" ? a + b : a - b;
+      return makeQuestion({
+        type: "addsub",
+        prompt: `Compute: ${a} ${op} ${b}`,
+        answer: value,
+        steps: kidStepsAddSub(a, b, op, value),
+        tag: op === "+" ? "Add" : "Subtract"
+      });
+    }
+
+    function genOrderOps(difficulty) {
+      // (base^exp) + addOrSub (but show order of ops)
+      let baseMax = difficulty === "easy" ? 6 : (difficulty === "hard" ? 12 : 9);
+      let exp = difficulty === "hard" ? randInt(2,3) : 2;
+      const base = randInt(2, baseMax);
+      const powerValue = Math.pow(base, exp);
+
+      let addMax = difficulty === "easy" ? 20 : (difficulty === "hard" ? 80 : 40);
+      let add = randInt(-addMax, addMax);
+      // avoid 0 too often
+      if (add === 0) add = 5;
+
+      const total = powerValue + add;
+      const sign = add >= 0 ? "+" : "−";
+
+      return makeQuestion({
+        type: "orderops",
+        prompt: `Compute (powers first): ${base}<sup>${exp}</sup> ${sign} ${Math.abs(add)}`,
+        answer: total,
+        steps: kidStepsOrderOfOpsPowerThenAdd(base, exp, add, total),
+        tag: "Order of operations"
+      });
+    }
+
+    function genMissingNumber(difficulty) {
+      // simple equation with powers sometimes: x + a = b OR x * a = b OR x^2 = b
+      const r = Math.random();
+      if (r < 0.34) {
+        // x + a = b
+        let aMax = difficulty === "easy" ? 20 : (difficulty === "hard" ? 120 : 60);
+        const x = randInt(1, difficulty === "hard" ? 80 : 40);
+        const a = randInt(1, aMax);
+        const b = x + a;
+        return makeQuestion({
+          type: "missing",
+          prompt: `Find x: x + ${a} = ${b}`,
+          answer: x,
+          steps: `I want x alone. So I do the opposite of +${a}, which is −${a}. Then ${b} − ${a} = ${x}. So x = ${x}.`,
+          tag: "Missing number"
+        });
+      } else if (r < 0.68) {
+        // x × a = b
+        let aMax = difficulty === "easy" ? 12 : (difficulty === "hard" ? 20 : 15);
+        const a = randInt(2, aMax);
+        const x = randInt(2, difficulty === "hard" ? 18 : 12);
+        const b = x * a;
+        return makeQuestion({
+          type: "missing",
+          prompt: `Find x: x × ${a} = ${b}`,
+          answer: x,
+          steps: `I want x alone. So I do the opposite of ×${a}, which is ÷${a}. Then ${b} ÷ ${a} = ${x}. So x = ${x}.`,
+          tag: "Missing number"
+        });
+      } else {
+        // x^2 = b (perfect square)
+        const x = randInt(2, difficulty === "hard" ? 20 : 15);
+        const b = x * x;
+        return makeQuestion({
+          type: "missing",
+          prompt: `Find x: x<sup>2</sup> = ${b}`,
+          answer: x,
+          steps: `If x² = ${b}, then x is the number that times itself makes ${b}. ${x} × ${x} = ${b}. So x = ${x}.`,
+          tag: "Powers (missing)"
+        });
+      }
+    }
+
+    function buildTest(count, difficulty) {
+      // Ensure we include powers and "more"
+      const gens = [
+        () => genPowers(difficulty),
+        () => genSquaresCubes(difficulty),
+        () => genOrderOps(difficulty),
+        () => genMultiplyDivide(difficulty),
+        () => genAddSub(difficulty),
+        () => genMissingNumber(difficulty)
+      ];
+
+      const qs = [];
+      // force at least 3 power-related
+      qs.push(genPowers(difficulty));
+      qs.push(genSquaresCubes(difficulty));
+      qs.push(genOrderOps(difficulty));
+
+      while (qs.length < count) {
+        qs.push(gens[randInt(0, gens.length - 1)]());
+      }
+      return shuffle(qs).slice(0, count);
+    }
+
+    // -------- UI render --------
+    let questions = [];
+
+    function render() {
+      const container = $("questions");
+      container.innerHTML = "";
+
+      questions.forEach((q, idx) => {
+        const el = document.createElement("div");
+        el.className = "q";
+        el.dataset.qid = q.id;
+
+        const top = document.createElement("div");
+        top.className = "qTop";
+
+        const left = document.createElement("div");
+        left.innerHTML = `<div class="prompt">Q${idx + 1}. ${q.prompt}</div>`;
+
+        const right = document.createElement("div");
+        right.className = "tag";
+        right.textContent = q.tag;
+
+        top.appendChild(left);
+        top.appendChild(right);
+
+        const answerRow = document.createElement("div");
+        answerRow.className = "answerRow";
+
+        const input = document.createElement("input");
+        input.type = "number";
+        input.inputMode = "numeric";
+        input.placeholder = "Your answer…";
+        input.value = q.user;
+        input.addEventListener("input", (e) => {
+          q.user = e.target.value;
+          q.checked = false;
+          q.correct = null;
+          updateButtons();
+          updateScoreBox();
+          // remove any old feedback when editing
+          const fb = el.querySelector(".feedback");
+          if (fb) fb.remove();
+        });
+
+        const status = document.createElement("span");
+        status.id = `status-${q.id}`;
+        status.className = "small";
+        status.textContent = "";
+
+        answerRow.appendChild(input);
+        answerRow.appendChild(status);
+
+        el.appendChild(top);
+        el.appendChild(answerRow);
+
+        if (q.checked) {
+          const fb = document.createElement("div");
+          fb.className = "feedback";
+          const ok = q.correct === true;
+          fb.innerHTML = ok
+            ? `<b class="ok">Correct!</b> Your answer is ${q.user}.`
+            : `<b class="no">Not yet.</b> You wrote <span class="mono">${q.user || "nothing"}</span>. The correct answer is <span class="mono">${q.answer}</span>.`;
+          el.appendChild(fb);
+          status.textContent = ok ? "✓" : "✗";
+          status.className = ok ? "ok" : "no";
+        }
+
+        container.appendChild(el);
+      });
+    }
+
+    function updateButtons() {
+      const hasQs = questions.length > 0;
+      $("checkBtn").disabled = !hasQs;
+      $("resetBtn").disabled = !hasQs;
+
+      // Only enable "Show steps" after at least one check happened
+      const anyChecked = questions.some(q => q.checked);
+      $("showBtn").disabled = !hasQs || !anyChecked;
+    }
+
+    function updateScoreBox() {
+      if (questions.length === 0) {
+        $("score").textContent = "—";
+        $("scoreNote").textContent = "Make a test to begin.";
+        return;
+      }
+
+      const checkedCount = questions.filter(q => q.checked).length;
+      if (checkedCount === 0) {
+        $("score").textContent = "—";
+        $("scoreNote").textContent = "Answer the questions, then click “Check my answers”.";
+        return;
+      }
+
+      const correctCount = questions.filter(q => q.correct).length;
+      $("score").textContent = `${correctCount} / ${questions.length}`;
+
+      const wrong = questions.length - correctCount;
+      if (wrong === 0) {
+        $("scoreNote").innerHTML = `<span class="ok">Perfect!</span> You got them all correct.`;
+      } else {
+        $("scoreNote").innerHTML =
+          `You got <span class="ok">${correctCount}</span> right and <span class="no">${wrong}</span> wrong.`;
+      }
+    }
+
+    function checkAnswers() {
+      questions.forEach(q => {
+        q.checked = true;
+        q.correct = isCorrect(q.user, q.answer);
+      });
+      render();
+      updateButtons();
+      updateScoreBox();
+    }
+
+    function showSteps() {
+      // Attach a kid-style "show your work" block under each question
+      const nodes = $("questions").querySelectorAll(".q");
+      nodes.forEach((node) => {
+        const qid = node.dataset.qid;
+        const q = questions.find(x => x.id === qid);
+        if (!q) return;
+
+        // avoid duplicates
+        if (node.querySelector(".steps")) return;
+
+        const steps = document.createElement("div");
+        steps.className = "feedback steps";
+        const ok = q.correct === true;
+
+        steps.innerHTML = `
+          <div><b>${ok ? '<span class="ok">My thinking (and you were right)</span>' : '<span class="warn">Let me show the steps</span>'}</b></div>
+          <div style="margin-top:6px;">${q.steps}</div>
+        `;
+        node.appendChild(steps);
+      });
+    }
+
+    function clearAnswers() {
+      questions.forEach(q => {
+        q.user = "";
+        q.checked = false;
+        q.correct = null;
+      });
+      render();
+      updateButtons();
+      updateScoreBox();
+    }
+
+    function newTest() {
+      const count = Math.max(5, Math.min(25, Number($("count").value || 10)));
+      const difficulty = $("difficulty").value;
+      questions = buildTest(count, difficulty);
+      render();
+      updateButtons();
+      updateScoreBox();
+    }
+
+    // -------- Wire up --------
+    $("newBtn").addEventListener("click", newTest);
+    $("checkBtn").addEventListener("click", checkAnswers);
+    $("showBtn").addEventListener("click", showSteps);
+    $("resetBtn").addEventListener("click", clearAnswers);
+
+    // Start with a test ready
+    newTest();
+  </script>
+</body>
+</html>

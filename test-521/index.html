@@ -628,7 +628,7 @@
     }
 
     function newTest() {
-      const count = Math.max(5, Math.min(25, Number($("count").value || 10)));
+      const count = Math.max(5, Math.min(1000, Number($("count").value || 10)));
       const difficulty = $("difficulty").value;
       questions = buildTest(count, difficulty);
       render();
